@@ -12,8 +12,8 @@ This Python tool extracts frames from a video file with options to:
 Clone the repository and change into the project directory:
 
 ```bash
-git clone <repository-url>
-cd <repository-directory>
+git clone https://github.com/Maxiviper117/simple-video-frame-extractor.git
+cd simple-video-frame-extractor
 ```
 
 ### 2. Create and Activate a Virtual Environment
