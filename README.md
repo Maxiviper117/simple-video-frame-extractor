@@ -54,13 +54,13 @@ python app/main.py <video_path> [--output_folder OUTPUT_FOLDER] [--scale SCALE] 
 - **--start**: Start time in seconds (default: `0.0`).
 - **--end**: End time in seconds (default: video duration if not provided).
 - **--frame_step**: Time step between frames in seconds (default: `1.0`).
-- **--similarity_threshold**: Threshold for Mean Squared Error (MSE) between consecutive frames. Higher values skip more similar frames (default: `0.0`). 
+- **--similarity_threshold**: Threshold for Mean Squared Error (MSE) between consecutive frames. Using this option is slower as it requires comparing frames. Higher values skip more similar frames (default: `0.0`). 
   - Values below `10.0` are not recommended as they may be too sensitive
   - `50.0`: Good starting point for most videos
   - `100.0`: Skips frames with minor differences
   - `1000.0`: Skips frames with moderate differences
   - Use higher values for more aggressive frame skipping but too high may be excessive!
-- **--ignore_similarity**: Flag to disable similarity checking and extract all frames.
+- **--ignore_similarity**: Flag to disable similarity checking. This is much faster as it skips frame comparison and extracts all frames according to the other settings (scale, frame_step, etc.).
 
 ### Example
 
