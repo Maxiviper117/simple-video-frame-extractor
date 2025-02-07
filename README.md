@@ -59,6 +59,6 @@ python app/main.py <video_path> [--output_folder OUTPUT_FOLDER] [--scale SCALE] 
 To extract frames from `input_video.mp4` starting at 0 seconds until 30 seconds, resizing frames to 90% of their original size, and extracting one frame every 1 second, run:
 
 ```bash
-python app/main.py ./input_video.mp4 --output_folder frames --scale 0.9 --start 0 --end 30 --frame_step 1
+python app/main.py ./input_video.mp4 --output_folder ./frames --scale 0.9 --start 0 --end 30 --frame_step 1
 ```
 
