@@ -122,7 +122,7 @@ def parse_arguments():
     parser.add_argument(
         "--scale",
         type=float,
-        default=0.9,
+        default=1,
         help="Scaling factor for frames (default 0.9).",
     )
     parser.add_argument(
