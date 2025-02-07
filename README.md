@@ -2,7 +2,7 @@
 
 This Python tool extracts frames from a video file with options to:
 
-> **[!NOTE]**
+> [!NOTE]
 > - 🎨 Resize frames using a scaling factor.
 > - ⏲️ Select a specific time range within the video.
 > - ⏭️ Skip frames using a specified time step.
@@ -50,7 +50,7 @@ python app/main.py <video_path> [--output_folder OUTPUT_FOLDER] [--scale SCALE] 
 
 ### ⚙️ Command-Line Arguments
 
-> **[!TIP]**
+> [TIP]
 > Use the following arguments to customize the extraction:
 
 - **📁 video_path** (required): Path to the input video file.
@@ -67,7 +67,7 @@ python app/main.py <video_path> [--output_folder OUTPUT_FOLDER] [--scale SCALE] 
   - Use higher values for more aggressive frame skipping but too high may be excessive!
 - **⚡ --ignore_similarity**: Flag to disable similarity checking. This is much faster as it skips frame comparison and extracts all frames according to the other settings (scale, frame_step, etc.).
 
-> **[!WARNING]**
+> [!WARNING]
 > Using a high similarity threshold may result in skipping too many frames, potentially losing important frames!
 
 ### 💡 Example
@@ -84,6 +84,6 @@ To extract all frames without similarity checking:
 python app/main.py ./input_video.mp4 --output_folder frames --ignore_similarity
 ```
 
-> **[!CAUTION]**
+> [!CAUTION]
 > Running the script on very large video files may consume significant disk space and processing time. Consider adjusting the `frame_step` and `similarity_threshold` parameters to optimize extraction!
 
