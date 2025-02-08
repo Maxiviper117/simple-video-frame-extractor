@@ -79,50 +79,44 @@ def extract_frames(
         sys.exit(1)
 
     print(f"Video duration: {duration:.2f} seconds, FPS: {fps:.2f}")
-    print(
-        f"Extracting frames from {start_time} s to {end_time} s with a step of {frame_step} s"
-    )
-
-    cap.set(cv2.CAP_PROP_POS_MSEC, start_time * 1000)
+    print(f"Extracting frames from {start_time} s to {end_time} s with a step of {frame_step} s")
     num_cores = os.cpu_count() or 1
     print(f"Using {num_cores} threads for processing.")
 
-    # Calculate total steps for progress bar
-    total_steps = int((end_time - start_time) / frame_step)
+    # Calculate frame indices and skip count
+    start_frame = int(start_time * fps)
+    end_frame = int(end_time * fps)
+    skip_frames = max(1, int(frame_step * fps))
+    total_steps = (end_frame - start_frame) // skip_frames
+
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+    current_frame_index = start_frame
     processed_count = 0
     skipped_count = 0
     saved_frame_count = 0
-    previous_frame = None  # Track the previous frame for similarity check
-
+    previous_frame = None  # For similarity comparison
     futures = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor, tqdm(total=total_steps, desc="Extracting frames") as pbar:
-        while True:
-            try:
-                ret, frame = cap.read()
-            except Exception as e:
-                print(f"Error reading frame: {e}")
-                skipped_count += 1
-                cap.set(cv2.CAP_PROP_POS_MSEC, ( (cap.get(cv2.CAP_PROP_POS_FRAMES)/fps + frame_step) * 1000))
-                pbar.update(1)
-                continue
 
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor, tqdm(total=total_steps, desc="Extracting frames") as pbar:
+        while current_frame_index < end_frame:
+            ret, frame = cap.read()
             if not ret:
                 break
-
-            current_frame = cap.get(cv2.CAP_PROP_POS_FRAMES)
-            current_time = current_frame / fps
-
-            if current_time > end_time:
-                break
+            current_time = current_frame_index / fps
 
             if not ignore_similarity and previous_frame is not None:
-                mse = np.mean(
-                    (frame.astype(np.float32) - previous_frame.astype(np.float32)) ** 2
-                )
+                # Optimized similarity check via cv2.absdiff
+                diff = cv2.absdiff(frame, previous_frame)
+                mse = np.mean(diff.astype(np.float32) ** 2)
                 if mse < similarity_threshold:
-                    # Skip extraction if the frame is too similar
                     skipped_count += 1
-                    cap.set(cv2.CAP_PROP_POS_MSEC, (current_time + frame_step) * 1000)
+                    # Skip remaining frames for this interval using grab()
+                    for _ in range(skip_frames - 1):
+                        if cap.grab():
+                            current_frame_index += 1
+                        else:
+                            break
+                    current_frame_index += 1
                     pbar.update(1)
                     continue
 
@@ -143,7 +137,14 @@ def extract_frames(
                 )
             )
             saved_frame_count += 1
-            cap.set(cv2.CAP_PROP_POS_MSEC, (current_time + frame_step) * 1000)
+
+            # Skip frames using grab() for efficiency
+            for _ in range(skip_frames - 1):
+                if cap.grab():
+                    current_frame_index += 1
+                else:
+                    break
+            current_frame_index += 1
             pbar.update(1)
 
     concurrent.futures.wait(futures)
