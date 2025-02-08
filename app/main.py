@@ -4,19 +4,29 @@ import concurrent.futures
 import argparse
 import sys
 import numpy as np  # Added for frame comparison
+from tqdm import tqdm  # added for progress bar
 
+# New mapping for interpolation methods
+INTERPOLATION_MAP = {
+    "linear": cv2.INTER_LINEAR,
+    "nearest": cv2.INTER_NEAREST,
+    "cubic": cv2.INTER_CUBIC,
+    "area": cv2.INTER_AREA,
+}
 
-def process_and_save(frame, frame_id, scale_factor, output_folder):
+def process_and_save(frame, frame_id, scale_factor, output_folder, img_format, overlay_timestamp, current_time, interpolation):
     """
     Resize the frame using the given scale factor and save it as an image.
     """
+    # Optionally overlay the timestamp
+    if overlay_timestamp:
+        text = f"{current_time:.2f}s"
+        cv2.putText(frame, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     height, width = frame.shape[:2]
     new_width = int(width * scale_factor)
     new_height = int(height * scale_factor)
-    resized_frame = cv2.resize(
-        frame, (new_width, new_height), interpolation=cv2.INTER_LINEAR
-    )
-    filename = os.path.join(output_folder, f"frame_{frame_id:06d}.jpg")
+    resized_frame = cv2.resize(frame, (new_width, new_height), interpolation=interpolation)
+    filename = os.path.join(output_folder, f"frame_{frame_id:06d}.{img_format}")
     cv2.imwrite(filename, resized_frame)
     print(f"Saved {filename}")
 
@@ -30,6 +40,9 @@ def extract_frames(
     frame_step=1.0,
     similarity_threshold=0.0,
     ignore_similarity=False,  # New parameter to toggle similarity check
+    img_format="jpg",
+    overlay_timestamp=False,
+    interpolation_method="linear"
 ):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -74,13 +87,25 @@ def extract_frames(
     num_cores = os.cpu_count() or 1
     print(f"Using {num_cores} threads for processing.")
 
-    futures = []
+    # Calculate total steps for progress bar
+    total_steps = int((end_time - start_time) / frame_step)
+    processed_count = 0
+    skipped_count = 0
     saved_frame_count = 0
     previous_frame = None  # Track the previous frame for similarity check
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor:
+    futures = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_cores) as executor, tqdm(total=total_steps, desc="Extracting frames") as pbar:
         while True:
-            ret, frame = cap.read()
+            try:
+                ret, frame = cap.read()
+            except Exception as e:
+                print(f"Error reading frame: {e}")
+                skipped_count += 1
+                cap.set(cv2.CAP_PROP_POS_MSEC, ( (cap.get(cv2.CAP_PROP_POS_FRAMES)/fps + frame_step) * 1000))
+                pbar.update(1)
+                continue
+
             if not ret:
                 break
 
@@ -96,10 +121,13 @@ def extract_frames(
                 )
                 if mse < similarity_threshold:
                     # Skip extraction if the frame is too similar
+                    skipped_count += 1
                     cap.set(cv2.CAP_PROP_POS_MSEC, (current_time + frame_step) * 1000)
+                    pbar.update(1)
                     continue
 
             previous_frame = frame.copy()
+            processed_count += 1
 
             futures.append(
                 executor.submit(
@@ -108,19 +136,25 @@ def extract_frames(
                     saved_frame_count,
                     scale_factor,
                     output_folder,
+                    img_format,
+                    overlay_timestamp,
+                    current_time,
+                    INTERPOLATION_MAP.get(interpolation_method, cv2.INTER_LINEAR)
                 )
             )
             saved_frame_count += 1
             cap.set(cv2.CAP_PROP_POS_MSEC, (current_time + frame_step) * 1000)
+            pbar.update(1)
 
     concurrent.futures.wait(futures)
     cap.release()
     print("Finished extracting frames.")
+    print(f"Summary: Processed frames: {processed_count}, Saved frames: {saved_frame_count}, Skipped frames: {skipped_count}")
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Extract frames from a video with scaling, multithreading, time range selection, duplicate frame skipping, and an option to ignore similarity check."
+        description="Extract frames from a video with scaling, multithreading, time range selection, duplicate frame skipping, timestamp overlay, interpolation options, and error tolerance."
     )
     parser.add_argument("video_path", help="Path to the input video file.")
     parser.add_argument(
@@ -158,6 +192,10 @@ def parse_arguments():
         action="store_true",
         help="If set, ignore the similarity check and extract all frames.",
     )
+    # New arguments
+    parser.add_argument("--format", choices=["jpg", "png"], default="jpg", help="Image format for saved frames.")
+    parser.add_argument("--timestamp", action="store_true", help="Overlay frame timestamp on extracted images.")
+    parser.add_argument("--interpolation", choices=["linear", "nearest", "cubic", "area"], default="linear", help="Interpolation method to resize frames.")
     return parser.parse_args()
 
 
@@ -172,4 +210,7 @@ if __name__ == "__main__":
         frame_step=args.frame_step,
         similarity_threshold=args.similarity_threshold,
         ignore_similarity=args.ignore_similarity,  # Passing the new flag
+        img_format=args.format,
+        overlay_timestamp=args.timestamp,
+        interpolation_method=args.interpolation
     )

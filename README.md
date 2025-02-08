@@ -45,7 +45,7 @@ pip install -r requirements.txt
 The main script is located at `app/main.py`. You can run the script from the command line using:
 
 ```bash
-python app/main.py <video_path> [--output_folder OUTPUT_FOLDER] [--scale SCALE] [--start START] [--end END] [--frame_step FRAME_STEP] [--similarity_threshold SIMILARITY_THRESHOLD] [--ignore_similarity]
+python app/main.py <video_path> [--output_folder OUTPUT_FOLDER] [--scale SCALE] [--start START] [--end END] [--frame_step FRAME_STEP] [--similarity_threshold SIMILARITY_THRESHOLD] [--ignore_similarity] [--format FORMAT] [--timestamp] [--interpolation INTERPOLATION]
 ```
 
 ### ⚙️ Command-Line Arguments
@@ -66,9 +66,18 @@ python app/main.py <video_path> [--output_folder OUTPUT_FOLDER] [--scale SCALE] 
   - `1000.0`: Skips frames with moderate differences
   - Use higher values for more aggressive frame skipping but too high may be excessive!
 - **⚡ --ignore_similarity**: Flag to disable similarity checking. This is much faster as it skips frame comparison and extracts all frames according to the other settings (scale, frame_step, etc.).
+- **🖼️ --format**: Image format for saved frames. Choices: `jpg` or `png` (default: `jpg`).
+- **⏱️ --timestamp**: Overlay frame timestamp on extracted images.
+- **🔄 --interpolation**: Interpolation method for resizing. Choices: `linear`, `nearest`, `cubic`, or `area` (default: `linear`).
 
 > [!WARNING]
 > Using a high similarity threshold may result in skipping too many frames, potentially losing important frames!
+
+## ✨ Additional Features
+
+- **Progress Indicator:** A progress bar (via tqdm) displays extraction progress.
+- **Detailed Logging & Summary:** At the end, the script outputs total processed, saved, and skipped frames.
+- **Error Tolerance:** Corrupt or unreadable frames are skipped gracefully without halting the extraction.
 
 ### 💡 Example
 
